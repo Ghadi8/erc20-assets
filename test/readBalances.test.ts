@@ -27,6 +27,7 @@ describe("readTokenData (multicall3 fallback)", () => {
             [true, padHex("0x06", { size: 32 })],
             [true, encodeAbiParameters([{ type: "string" }], ["USD Coin"])],
             [true, encodeAbiParameters([{ type: "string" }], ["USDC"])],
+            [true, padHex("0x00", { size: 32 })],
           ]]
         );
         return Response.json({ jsonrpc: "2.0", id: body.id, result: ret });
@@ -45,6 +46,7 @@ describe("readTokenData (multicall3 fallback)", () => {
         decimals: 6,
         name: "USD Coin",
         symbol: "USDC",
+        isNonFungible: false,
       },
     ]);
     srv.stop();
@@ -72,6 +74,7 @@ describe("readTokenData (multicall3 fallback)", () => {
             [true, padHex("0x12", { size: 32 })],
             [true, padded as `0x${string}`],
             [true, padded as `0x${string}`],
+            [true, padHex("0x00", { size: 32 })],
           ]]
         );
         return Response.json({ jsonrpc: "2.0", id: body.id, result: ret });

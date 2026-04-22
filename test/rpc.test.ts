@@ -79,4 +79,46 @@ describe("RpcClient", () => {
     expect(isStateOverrideUnsupported(new RpcError(-32000, "state override not supported"))).toBe(true);
     expect(isStateOverrideUnsupported(new RpcError(-32601, "method eth_call requires 2 params"))).toBe(false);
   });
+
+  test("persistent HTTP 5xx error includes method and params in message", async () => {
+    const srv = Bun.serve({
+      port: 0,
+      fetch: () => new Response("boom", { status: 500 }),
+    });
+    const c = new RpcClient(`http://localhost:${srv.port}`);
+    let err: unknown;
+    try {
+      await c.call("eth_getCode", ["0xcafecafecafecafecafecafecafecafecafecafe", "0x2faf080"]);
+    } catch (e) {
+      err = e;
+    }
+    const msg = (err as Error).message;
+    expect(msg).toContain("eth_getCode");
+    expect(msg).toContain("0x2faf080");
+    expect(msg).toContain("500");
+    srv.stop();
+  });
+
+  test("persistent HTTP 5xx error for batch includes batch methods in message", async () => {
+    const srv = Bun.serve({
+      port: 0,
+      fetch: () => new Response("boom", { status: 503 }),
+    });
+    const c = new RpcClient(`http://localhost:${srv.port}`);
+    let err: unknown;
+    try {
+      await c.batch([
+        { method: "eth_call", params: [] },
+        { method: "eth_getBalance", params: [] },
+      ]);
+    } catch (e) {
+      err = e;
+    }
+    const msg = (err as Error).message;
+    expect(msg).toContain("batch");
+    expect(msg).toContain("eth_call");
+    expect(msg).toContain("eth_getBalance");
+    expect(msg).toContain("503");
+    srv.stop();
+  });
 });

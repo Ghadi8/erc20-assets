@@ -6,6 +6,7 @@
   "private": true,
   "scripts": {
     "compile": "bun compile.ts",
+    "run:getAssets": "bun scripts/run.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },

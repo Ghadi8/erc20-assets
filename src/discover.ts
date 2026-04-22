@@ -1,6 +1,5 @@
 import { pad, type Hex } from "viem";
 import { RpcClient, RpcError, isRangeTooLarge } from "./rpc";
-import type { Bounds } from "./bounds";
 
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef" as const;
 
@@ -10,18 +9,19 @@ type Opts = { maxLogRange: number; concurrency?: number };
 export async function discoverTokens(
   rpc: RpcClient,
   address: Hex,
-  bounds: Bounds,
+  fromBlock: bigint,
+  latest: bigint,
   opts: Opts
 ): Promise<Hex[]> {
-  if (!bounds.hasHistory) return [];
+  if (latest < fromBlock) return [];
   const concurrency = opts.concurrency ?? 5;
   const topic2 = pad(address.toLowerCase() as Hex, { size: 32 });
 
   const windows: Array<[bigint, bigint]> = [];
   const max = BigInt(opts.maxLogRange);
-  let cursor = bounds.fromBlock;
-  while (cursor <= bounds.latest) {
-    const end = cursor + max - 1n > bounds.latest ? bounds.latest : cursor + max - 1n;
+  let cursor = fromBlock;
+  while (cursor <= latest) {
+    const end = cursor + max - 1n > latest ? latest : cursor + max - 1n;
     windows.push([cursor, end]);
     cursor = end + 1n;
   }

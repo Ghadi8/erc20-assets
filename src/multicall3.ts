@@ -9,6 +9,10 @@ export const DECIMALS_SELECTOR = "0x313ce567" as const;
 export const NAME_SELECTOR = "0x06fdde03" as const;
 export const SYMBOL_SELECTOR = "0x95d89b41" as const;
 
+// supportsInterface(bytes4) selector + ERC-721 interface id, right-padded.
+export const SUPPORTS_INTERFACE_ERC721_CALLDATA =
+  "0x01ffc9a780ac58cd00000000000000000000000000000000000000000000000000000000" as const;
+
 const AGGREGATE3_INPUT = [
   {
     type: "tuple[]",

@@ -50,7 +50,8 @@ describe("discoverTokens", () => {
     const tokens = await discoverTokens(
       rpc,
       "0xabc0000000000000000000000000000000000000",
-      { fromBlock: 0n, latest: 15_000n, hasHistory: true },
+      0n,
+      15_000n,
       { maxLogRange: 10_000 }
     );
     expect(tokens.sort()).toEqual([
@@ -68,19 +69,21 @@ describe("discoverTokens", () => {
     const tokens = await discoverTokens(
       rpc,
       "0xabc0000000000000000000000000000000000000",
-      { fromBlock: 0n, latest: 10_000n, hasHistory: true },
+      0n,
+      10_000n,
       { maxLogRange: 10_000 }
     );
     expect(tokens).toEqual(["0x1111111111111111111111111111111111111111"]);
     stop();
   });
 
-  test("returns [] when bounds.hasHistory is false", async () => {
+  test("returns [] when latest < fromBlock", async () => {
     const { rpc, stop } = logServer({ tokensByRange: () => [] });
     const tokens = await discoverTokens(
       rpc,
       "0xabc0000000000000000000000000000000000000",
-      { fromBlock: 10n, latest: 10n, hasHistory: false },
+      100n,
+      10n,
       { maxLogRange: 10_000 }
     );
     expect(tokens).toEqual([]);

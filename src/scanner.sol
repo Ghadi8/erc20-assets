@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 contract AssetScanner {
-    struct Result { uint256 balance; uint8 decimals; string name; string symbol; }
+    struct Result { uint256 balance; uint8 decimals; string name; string symbol; bool isNonFungible; }
 
     function scan(address owner, address[] calldata tokens)
         external view returns (Result[] memory out)
@@ -21,6 +21,10 @@ contract AssetScanner {
 
             (bool okS, bytes memory sy) = t.staticcall(abi.encodeWithSelector(0x95d89b41));
             if (okS) out[i].symbol = _decodeStringOrBytes32(sy);
+
+            // ERC-165 supportsInterface(0x80ac58cd) — ERC-721. Non-ERC-165 contracts revert; treat as false.
+            (bool okI, bytes memory sup) = t.staticcall(abi.encodeWithSelector(0x01ffc9a7, bytes4(0x80ac58cd)));
+            if (okI && sup.length >= 32) out[i].isNonFungible = abi.decode(sup, (bool));
         }
     }
 

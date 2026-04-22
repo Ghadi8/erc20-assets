@@ -19,6 +19,28 @@ const MAX_ATTEMPTS = 3;
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const jittered = (base: number) => base * (0.5 + Math.random());
 
+function describeCall(body: unknown): string {
+  if (Array.isArray(body)) {
+    const methods = body
+      .map((b) => (b as { method?: string })?.method)
+      .filter((m): m is string => Boolean(m));
+    const head = methods.slice(0, 4).join(",");
+    const tail = methods.length > 4 ? `,+${methods.length - 4}` : "";
+    return `batch[${head}${tail}]`;
+  }
+  const b = body as { method?: string; params?: unknown };
+  const method = b?.method ?? "<unknown>";
+  const params = b?.params;
+  if (Array.isArray(params) && params.length > 0) {
+    const rendered = params
+      .map((p) => (typeof p === "string" ? p : JSON.stringify(p)))
+      .join(",");
+    const snippet = rendered.length <= 120 ? rendered : rendered.slice(0, 117) + "...";
+    return `${method}(${snippet})`;
+  }
+  return method;
+}
+
 export class RpcClient {
   private nextId = 1;
   constructor(public readonly url: string) {}
@@ -58,6 +80,7 @@ export class RpcClient {
   }
 
   private async postWithRetry(body: unknown): Promise<unknown> {
+    const ctx = describeCall(body);
     let lastErr: unknown;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
@@ -67,22 +90,25 @@ export class RpcClient {
           body: JSON.stringify(body),
         });
         if (RETRYABLE_STATUS.has(res.status)) {
-          lastErr = new Error(`HTTP ${res.status}`);
+          lastErr = new Error(`HTTP ${res.status} from ${ctx}`);
           if (attempt < MAX_ATTEMPTS) {
             await sleep(jittered(200 * 2 ** (attempt - 1)));
             continue;
           }
           throw lastErr;
         }
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status} from ${ctx}: ${await res.text()}`);
         return await res.json();
       } catch (e) {
         lastErr = e;
-        const isNet = e instanceof TypeError || (e as Error)?.name === "AbortError";
-        if (attempt < MAX_ATTEMPTS && (isNet || (e as Error)?.message?.startsWith("HTTP "))) {
+        const err = e as Error;
+        const isNet = e instanceof TypeError || err?.name === "AbortError";
+        const isHttp = err?.message?.startsWith("HTTP ");
+        if (attempt < MAX_ATTEMPTS && (isNet || isHttp)) {
           await sleep(jittered(200 * 2 ** (attempt - 1)));
           continue;
         }
+        if (isNet) throw new Error(`${err.message} from ${ctx}`);
         throw e;
       }
     }

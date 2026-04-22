@@ -14,6 +14,7 @@ import {
   DECIMALS_SELECTOR,
   NAME_SELECTOR,
   SYMBOL_SELECTOR,
+  SUPPORTS_INTERFACE_ERC721_CALLDATA,
 } from "./multicall3";
 
 export type TokenData = {
@@ -22,6 +23,7 @@ export type TokenData = {
   decimals: number;
   name: string;
   symbol: string;
+  isNonFungible: boolean;
 };
 
 // Verified via: bun -e 'import("viem").then(({toFunctionSelector})=>console.log(toFunctionSelector("scan(address,address[])")))'
@@ -36,6 +38,7 @@ const SCAN_OUTPUT = [
       { type: "uint8", name: "decimals" },
       { type: "string", name: "name" },
       { type: "string", name: "symbol" },
+      { type: "bool", name: "isNonFungible" },
     ],
   },
 ] as const;
@@ -90,6 +93,7 @@ async function tryScannerPath(
       decimals: number;
       name: string;
       symbol: string;
+      isNonFungible: boolean;
     }[];
     return typed.map((r, i) => ({
       address: tokens[i]!,
@@ -97,6 +101,7 @@ async function tryScannerPath(
       decimals: r.decimals === 0 ? 18 : r.decimals,
       name: r.name ?? "",
       symbol: r.symbol ?? "",
+      isNonFungible: r.isNonFungible === true,
     }));
   } catch (e) {
     if (e instanceof RpcError && isStateOverrideUnsupported(e)) return "unsupported";
@@ -127,6 +132,7 @@ async function multicallPath(
     { target: t, allowFailure: true, callData: DECIMALS_SELECTOR as Hex },
     { target: t, allowFailure: true, callData: NAME_SELECTOR as Hex },
     { target: t, allowFailure: true, callData: SYMBOL_SELECTOR as Hex },
+    { target: t, allowFailure: true, callData: SUPPORTS_INTERFACE_ERC721_CALLDATA as Hex },
   ]);
 
   const aggregate = encodeAggregate3(calls);
@@ -138,10 +144,11 @@ async function multicallPath(
 
   const out: TokenData[] = [];
   for (let i = 0; i < tokens.length; i++) {
-    const b = decoded[i * 4]!;
-    const d = decoded[i * 4 + 1]!;
-    const n = decoded[i * 4 + 2]!;
-    const s = decoded[i * 4 + 3]!;
+    const b = decoded[i * 5]!;
+    const d = decoded[i * 5 + 1]!;
+    const n = decoded[i * 5 + 2]!;
+    const s = decoded[i * 5 + 3]!;
+    const sup = decoded[i * 5 + 4]!;
 
     let balance = 0n;
     if (b.success && b.returnData.length >= 66) {
@@ -165,7 +172,16 @@ async function multicallPath(
     const name = n.success ? decodeString(n.returnData) : "";
     const symbol = s.success ? decodeString(s.returnData) : "";
 
-    out.push({ address: tokens[i]!, balance, decimals, name, symbol });
+    let isNonFungible = false;
+    if (sup.success && sup.returnData.length >= 66) {
+      try {
+        isNonFungible = BigInt(sup.returnData.slice(0, 66)) !== 0n;
+      } catch {
+        // keep default false
+      }
+    }
+
+    out.push({ address: tokens[i]!, balance, decimals, name, symbol, isNonFungible });
   }
   return out;
 }
