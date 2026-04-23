@@ -97,7 +97,26 @@ export class RpcClient {
           }
           throw lastErr;
         }
-        if (!res.ok) throw new Error(`HTTP ${res.status} from ${ctx}: ${await res.text()}`);
+        if (!res.ok) {
+          const text = await res.text();
+          let rpcErr: RpcError | null = null;
+          try {
+            const parsed = JSON.parse(text) as {
+              error?: { code: number; message: string; data?: unknown };
+            };
+            if (parsed?.error && typeof parsed.error.message === "string") {
+              rpcErr = new RpcError(parsed.error.code, parsed.error.message, parsed.error.data);
+            }
+          } catch {
+            // body not JSON
+          }
+          lastErr = rpcErr ?? new Error(`HTTP ${res.status} from ${ctx}: ${text}`);
+          if (attempt < MAX_ATTEMPTS) {
+            await sleep(jittered(200 * 2 ** (attempt - 1)));
+            continue;
+          }
+          throw lastErr;
+        }
         return await res.json();
       } catch (e) {
         lastErr = e;

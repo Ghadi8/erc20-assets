@@ -11,6 +11,7 @@ export type ChainConfig = {
   maxLogRange?: number;
   fromBlock?: bigint;
   anchorContract?: Address;
+  discoverConcurrency?: number;
 };
 
 export type AssetEntry = {
@@ -54,7 +55,10 @@ export async function getAssets(owner: Address, cfg: ChainConfig): Promise<Asset
     });
   }
 
-  const candidates = await discoverTokens(rpc, owner, fromBlock, latest, { maxLogRange });
+  const candidates = await discoverTokens(rpc, owner, fromBlock, latest, {
+    maxLogRange,
+    ...(cfg.discoverConcurrency ? { concurrency: cfg.discoverConcurrency } : {}),
+  });
   if (candidates.length === 0) return entries;
 
   const tokens = await readTokenData(rpc, owner, candidates);
