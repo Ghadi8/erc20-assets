@@ -6,8 +6,7 @@ JSON-RPC methods (`eth_getBalance`, `eth_blockNumber`, `eth_chainId`,
 `eth_getCode`, `eth_getLogs`, `eth_call`). No indexer, no vendor SDK, no
 per-chain configuration beyond an RPC URL.
 
-The goal is to replace reliance on proprietary endpoints like Alchemy's
-`wallet_getAssets` with a portable, self-contained implementation that works
+The goal is to replace reliance on proprietary endpoints with a portable, self-contained implementation that works
 against any EVM JSON-RPC endpoint.
 
 ---
@@ -42,8 +41,8 @@ bun run run:getAssets
 
 ```ts
 type AssetEntry = {
-  address: `0x${string}` | null;            // null for native
-  balance: `0x${string}`;                   // 32-byte left-padded hex
+  address: `0x${string}` | null; // null for native
+  balance: `0x${string}`; // 32-byte left-padded hex
   metadata: { decimals: number; name: string; symbol: string };
   type: "native" | "erc20";
 };
@@ -126,21 +125,13 @@ returns `null` and `getAssets` falls back to `fromBlock=0`.
 The log scan (`eth_getLogs`) dominates end-to-end cost. The single biggest
 lever is **`maxLogRange`**, the per-window block cap.
 
-Typical values by provider class:
-
-| Provider                                      | Suggested `maxLogRange`  |
-| --------------------------------------------- | ------------------------ |
-| Alchemy, Infura                               | `10_000` (their cap)     |
-| dRPC, QuickNode, most L2 public endpoints     | `100_000` – `1_000_000`  |
-| Self-hosted / archive nodes                   | As high as the node allows |
-
 Measured on Arbitrum Sepolia via dRPC, fresh-process cold start:
 
-| `MAX_LOG_RANGE` | Windows | Discover | Total  |
-| ---------------:| -------:| --------:| ------:|
-| `10_000`        | 1,782   | 37.7s    | 41s    |
-| `100_000`       | 179     | 4.3s     | 7.7s   |
-| `1_000_000`     | 18      | 0.5s     | 5.3s   |
+| `MAX_LOG_RANGE` | Windows | Discover | Total |
+| --------------: | ------: | -------: | ----: |
+|        `10_000` |   1,782 |    37.7s |   41s |
+|       `100_000` |     179 |     4.3s |  7.7s |
+|     `1_000_000` |      18 |     0.5s |  5.3s |
 
 In a long-running service the `anchorContract` binary search runs once per
 `(chainId, factory)` and is cached for the process lifetime, so steady-state
@@ -149,13 +140,13 @@ above).
 
 Other tunables (all with safe defaults):
 
-| Knob                     | Default | Location             |
-| ------------------------ | ------- | -------------------- |
-| `maxLogRange`            | 10_000  | `ChainConfig`        |
-| discover concurrency     | 5       | `discover.ts`        |
-| readBalances concurrency | 3       | `readBalances.ts`    |
-| scanner batch size       | 500     | auto-halves on error |
-| multicall batch size     | 250     | auto-halves on error |
+| Knob                     | Default           | Location                            |
+| ------------------------ | ----------------- | ----------------------------------- |
+| `maxLogRange`            | 10_000            | `ChainConfig`                       |
+| discover concurrency     | 5                 | `discover.ts`                       |
+| readBalances concurrency | 3                 | `readBalances.ts`                   |
+| scanner batch size       | 500               | auto-halves on error                |
+| multicall batch size     | 250               | auto-halves on error                |
 | RPC retry                | 3, jitter backoff | on 429, 500, 502, 503, 504, network |
 
 ---
@@ -164,22 +155,22 @@ Other tunables (all with safe defaults):
 
 ### `ChainConfig` (library)
 
-| Field            | Type           | Required | Purpose                                      |
-| ---------------- | -------------- | -------- | -------------------------------------------- |
-| `rpcUrl`         | `string`       | yes      | JSON-RPC endpoint                            |
-| `anchorContract` | `Address`      | no       | Narrows `fromBlock` to this contract's deploy block |
-| `fromBlock`      | `bigint`       | no       | Explicit lower bound; wins over `anchorContract` |
-| `maxLogRange`    | `number`       | no       | `eth_getLogs` per-window cap (default 10,000)|
+| Field            | Type      | Required | Purpose                                             |
+| ---------------- | --------- | -------- | --------------------------------------------------- |
+| `rpcUrl`         | `string`  | yes      | JSON-RPC endpoint                                   |
+| `anchorContract` | `Address` | no       | Narrows `fromBlock` to this contract's deploy block |
+| `fromBlock`      | `bigint`  | no       | Explicit lower bound; wins over `anchorContract`    |
+| `maxLogRange`    | `number`  | no       | `eth_getLogs` per-window cap (default 10,000)       |
 
 ### Environment variables (`scripts/run.ts`)
 
-| Var                       | Required | Purpose                                         |
-| ------------------------- | -------- | ----------------------------------------------- |
-| `RPC_URL`                 | yes      | JSON-RPC endpoint                               |
-| `GET_ASSETS_TEST_ADDRESS` | yes      | Owner to query                                  |
-| `ANCHOR_CONTRACT`         | no       | Factory address; default is baked into `run.ts` |
-| `FROM_BLOCK`              | no       | Override; takes precedence over `ANCHOR_CONTRACT`|
-| `MAX_LOG_RANGE`           | no       | Per-window `eth_getLogs` block cap              |
+| Var                       | Required | Purpose                                           |
+| ------------------------- | -------- | ------------------------------------------------- |
+| `RPC_URL`                 | yes      | JSON-RPC endpoint                                 |
+| `GET_ASSETS_TEST_ADDRESS` | yes      | Owner to query                                    |
+| `ANCHOR_CONTRACT`         | no       | Factory address; default is baked into `run.ts`   |
+| `FROM_BLOCK`              | no       | Override; takes precedence over `ANCHOR_CONTRACT` |
+| `MAX_LOG_RANGE`           | no       | Per-window `eth_getLogs` block cap                |
 
 ---
 
@@ -258,4 +249,4 @@ deterministic. Integration tests in `test/getAssets.test.ts` run only when
 
 ## License
 
-Not specified — add one before publishing.
+MIT License
