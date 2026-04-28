@@ -8,6 +8,8 @@ const rpcUrl = process.env.RPC_URL;
 const fromBlockEnv = process.env.FROM_BLOCK;
 const maxLogRangeEnv = process.env.MAX_LOG_RANGE;
 const discoverConcurrencyEnv = process.env.DISCOVER_CONCURRENCY;
+const assetTypeFilterEnv = process.env.ASSET_TYPE_FILTER;
+const assetFilterEnv = process.env.ASSET_FILTER;
 const anchorContract = (process.env.ANCHOR_CONTRACT ??
   "0x5803c076563C85799989d42Fc00292A8aE52fa9E") as Address;
 
@@ -15,6 +17,24 @@ if (!address || !rpcUrl) {
   console.error("Set GET_ASSETS_TEST_ADDRESS and RPC_URL in .env");
   process.exit(1);
 }
+
+let assetTypeFilter: "native" | "erc20" | undefined;
+if (assetTypeFilterEnv) {
+  if (assetTypeFilterEnv !== "native" && assetTypeFilterEnv !== "erc20") {
+    console.error(`ASSET_TYPE_FILTER must be "native" or "erc20"`);
+    process.exit(1);
+  }
+  assetTypeFilter = assetTypeFilterEnv;
+}
+
+const assetFilter = assetFilterEnv
+  ? (assetFilterEnv
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0) as Address[])
+  : undefined;
+
+const skipDiscovery = assetTypeFilter === "native" || (assetFilter && assetFilter.length > 0);
 
 async function probeStateOverride(): Promise<boolean> {
   const rpc = new RpcClient(rpcUrl!);
@@ -31,11 +51,13 @@ async function probeStateOverride(): Promise<boolean> {
   }
 }
 
-const scannerOk = await probeStateOverride();
-console.log(`state-override (scanner path) supported: ${scannerOk}`);
+if (assetTypeFilter !== "native") {
+  const scannerOk = await probeStateOverride();
+  console.log(`state-override (scanner path) supported: ${scannerOk}`);
+}
 
 let fromBlock = fromBlockEnv ? BigInt(fromBlockEnv) : undefined;
-if (fromBlock === undefined) {
+if (fromBlock === undefined && !skipDiscovery) {
   const rpc = new RpcClient(rpcUrl!);
   const latest = BigInt(await rpc.call<`0x${string}`>("eth_blockNumber", []));
   const t = Date.now();
@@ -57,6 +79,8 @@ const cfg = {
   ...(fromBlock !== undefined ? { fromBlock } : {}),
   ...(maxLogRangeEnv ? { maxLogRange: Number(maxLogRangeEnv) } : {}),
   ...(discoverConcurrencyEnv ? { discoverConcurrency: Number(discoverConcurrencyEnv) } : {}),
+  ...(assetTypeFilter ? { assetTypeFilter } : {}),
+  ...(assetFilter && assetFilter.length > 0 ? { assetFilter } : {}),
 };
 
 const t0 = Date.now();

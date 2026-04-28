@@ -155,22 +155,26 @@ Other tunables (all with safe defaults):
 
 ### `ChainConfig` (library)
 
-| Field            | Type      | Required | Purpose                                             |
-| ---------------- | --------- | -------- | --------------------------------------------------- |
-| `rpcUrl`         | `string`  | yes      | JSON-RPC endpoint                                   |
-| `anchorContract` | `Address` | no       | Narrows `fromBlock` to this contract's deploy block |
-| `fromBlock`      | `bigint`  | no       | Explicit lower bound; wins over `anchorContract`    |
-| `maxLogRange`    | `number`  | no       | `eth_getLogs` per-window cap (default 10,000)       |
+| Field             | Type                   | Required | Purpose                                                        |
+| ----------------- | ---------------------- | -------- | -------------------------------------------------------------- |
+| `rpcUrl`          | `string`               | yes      | JSON-RPC endpoint                                              |
+| `anchorContract`  | `Address`              | no       | Narrows `fromBlock` to this contract's deploy block            |
+| `fromBlock`       | `bigint`               | no       | Explicit lower bound; wins over `anchorContract`               |
+| `maxLogRange`     | `number`               | no       | `eth_getLogs` per-window cap (default 10,000)                  |
+| `assetTypeFilter` | `"native" \| "erc20"`  | no       | Restrict output to one type; skips the other path's RPC calls  |
+| `assetFilter`     | `Address[]`            | no       | Skip log discovery and read balances for these tokens directly |
 
 ### Environment variables (`scripts/run.ts`)
 
-| Var                       | Required | Purpose                                           |
-| ------------------------- | -------- | ------------------------------------------------- |
-| `RPC_URL`                 | yes      | JSON-RPC endpoint                                 |
-| `GET_ASSETS_TEST_ADDRESS` | yes      | Owner to query                                    |
-| `ANCHOR_CONTRACT`         | no       | Factory address; default is baked into `run.ts`   |
-| `FROM_BLOCK`              | no       | Override; takes precedence over `ANCHOR_CONTRACT` |
-| `MAX_LOG_RANGE`           | no       | Per-window `eth_getLogs` block cap                |
+| Var                       | Required | Purpose                                                                         |
+| ------------------------- | -------- | ------------------------------------------------------------------------------- |
+| `RPC_URL`                 | yes      | JSON-RPC endpoint                                                               |
+| `GET_ASSETS_TEST_ADDRESS` | yes      | Owner to query                                                                  |
+| `ANCHOR_CONTRACT`         | no       | Factory address; default is baked into `run.ts`                                 |
+| `FROM_BLOCK`              | no       | Override; takes precedence over `ANCHOR_CONTRACT`                               |
+| `MAX_LOG_RANGE`           | no       | Per-window `eth_getLogs` block cap                                              |
+| `ASSET_TYPE_FILTER`       | no       | `native` or `erc20` — restricts output to that type                             |
+| `ASSET_FILTER`            | no       | Comma-separated token addresses; skips log discovery and reads these directly   |
 
 ---
 
